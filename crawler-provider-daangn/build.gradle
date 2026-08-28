@@ -1,0 +1,17 @@
+dependencies {
+    api project(
+        ':crawler-core'
+    )
+
+    implementation(
+        'org.jsoup:jsoup:1.21.2'
+    )
+
+    testImplementation platform(
+        'org.junit:junit-bom:5.13.4'
+    )
+
+    testImplementation(
+        'org.junit.jupiter:junit-jupiter'
+    )
+}
