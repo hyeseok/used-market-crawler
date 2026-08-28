@@ -5,14 +5,6 @@ plugins {
 
 dependencies {
     implementation project(
-        ':crawler-core'
-    )
-
-    implementation project(
-        ':crawler-provider-daangn'
-    )
-
-    implementation project(
         ':crawler-spring-boot-starter'
     )
 

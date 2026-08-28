@@ -4,3 +4,9 @@ spring:
 
 server:
   port: 8080
+
+used-market-crawler:
+  daangn:
+    enabled: true
+    connect-timeout: 5s
+    request-timeout: 10s

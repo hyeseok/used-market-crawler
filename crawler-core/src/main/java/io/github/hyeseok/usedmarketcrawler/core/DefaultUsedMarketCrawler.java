@@ -1,6 +1,5 @@
 package io.github.hyeseok.usedmarketcrawler.core;
 
-import io.github.hyeseok.usedmarketcrawler.core.model.MarketType;
 import io.github.hyeseok.usedmarketcrawler.core.model.UsedItem;
 import io.github.hyeseok.usedmarketcrawler.core.model.UsedMarketProviderResult;
 import io.github.hyeseok.usedmarketcrawler.core.model.UsedMarketSearchRequest;
@@ -11,18 +10,15 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Set;
+import java.util.Objects;
 
-public class DefaultUsedMarketCrawler
-    implements UsedMarketCrawler {
+public class DefaultUsedMarketCrawler implements UsedMarketCrawler {
 
-    private final List<UsedMarketProvider>
-        providers;
+    private final List<UsedMarketProvider> providers;
 
     public DefaultUsedMarketCrawler(
         List<UsedMarketProvider> providers
     ) {
-
         if (
             providers == null
         ) {
@@ -33,131 +29,50 @@ public class DefaultUsedMarketCrawler
         }
 
         this.providers =
-            List.copyOf(
-                providers
-            );
+            providers.stream()
+                .filter(
+                    Objects::nonNull
+                )
+                .toList();
     }
 
     @Override
     public UsedMarketSearchResult search(
         UsedMarketSearchRequest request
     ) {
-
-        if (
-            request == null
-        ) {
-            throw new IllegalArgumentException(
-                "request must not be null"
-            );
-        }
+        validateRequest(
+            request
+        );
 
         List<UsedMarketProviderResult>
             providerResults =
-            new ArrayList<>();
-
-        List<UsedItem> items =
-            new ArrayList<>();
-
-        Set<MarketType> requestedMarkets =
-            request.markets();
-
-        for (
-            UsedMarketProvider provider :
-            providers
-        ) {
-
-            if (
-                provider == null
-            ) {
-                continue;
-            }
-
-            MarketType market =
-                provider.market();
-
-            if (
-                market == null
-            ) {
-                continue;
-            }
-
-            if (
-                !requestedMarkets.isEmpty() &&
-                !requestedMarkets.contains(
-                    market
-                )
-            ) {
-                continue;
-            }
-
-            UsedMarketProviderResult result;
-
-            try {
-
-                result =
-                    provider.search(
-                        request
-                    );
-
-                if (
-                    result == null
-                ) {
-                    result =
-                        UsedMarketProviderResult.failure(
-                            market,
-                            "Provider returned null result"
-                        );
-                }
-
-            } catch (
-                Exception e
-            ) {
-
-                result =
-                    UsedMarketProviderResult.failure(
-                        market,
-                        getErrorMessage(
-                            e
-                        )
-                    );
-            }
-
-            providerResults.add(
-                result
+            executeProviders(
+                request
             );
 
-            if (
-                result.success()
-            ) {
-                items.addAll(
-                    result.items()
-                );
-            }
-        }
-
-        List<UsedItem> filteredItems =
-            items.stream()
+        List<UsedItem>
+            items =
+            providerResults.stream()
                 .filter(
-                    item ->
-                        matchesPriceFilter(
-                            item,
-                            request
-                        )
+                    UsedMarketProviderResult::success
+                )
+                .flatMap(
+                    result ->
+                        result.items()
+                            .stream()
+                )
+                .filter(
+                    Objects::nonNull
                 )
                 .filter(
                     item ->
-                        matchesLocationFilter(
+                        matchesPrice(
                             item,
                             request
                         )
                 )
                 .sorted(
-                    Comparator.comparing(
-                        UsedItem::publishedAt,
-                        Comparator.nullsLast(
-                            Comparator.reverseOrder()
-                        )
-                    )
+                    publishedAtComparator()
                 )
                 .limit(
                     request.limit()
@@ -166,31 +81,121 @@ public class DefaultUsedMarketCrawler
 
         return new UsedMarketSearchResult(
             request.keyword(),
-            filteredItems,
+            items,
             providerResults
         );
     }
 
-    private boolean matchesPriceFilter(
+    private List<UsedMarketProviderResult>
+        executeProviders(
+            UsedMarketSearchRequest request
+        ) {
+
+        List<UsedMarketProviderResult>
+            results =
+            new ArrayList<>();
+
+        for (
+            UsedMarketProvider provider :
+            providers
+        ) {
+            if (
+                !shouldSearchProvider(
+                    provider,
+                    request
+                )
+            ) {
+                continue;
+            }
+
+            try {
+                UsedMarketProviderResult
+                    result =
+                    provider.search(
+                        request
+                    );
+
+                if (
+                    result == null
+                ) {
+                    results.add(
+                        UsedMarketProviderResult.failure(
+                            provider.market(),
+                            "Provider returned null result."
+                        )
+                    );
+
+                    continue;
+                }
+
+                results.add(
+                    result
+                );
+            } catch (
+                Exception exception
+            ) {
+                results.add(
+                    UsedMarketProviderResult.failure(
+                        provider.market(),
+                        buildProviderErrorMessage(
+                            exception
+                        )
+                    )
+                );
+            }
+        }
+
+        return List.copyOf(
+            results
+        );
+    }
+
+    private boolean shouldSearchProvider(
+        UsedMarketProvider provider,
+        UsedMarketSearchRequest request
+    ) {
+        if (
+            provider == null
+        ) {
+            return false;
+        }
+
+        if (
+            request.markets() == null
+                || request.markets()
+                    .isEmpty()
+        ) {
+            return true;
+        }
+
+        return request.markets()
+            .contains(
+                provider.market()
+            );
+    }
+
+    private boolean matchesPrice(
         UsedItem item,
         UsedMarketSearchRequest request
     ) {
-
         Long price =
             item.price();
 
         if (
             price == null
         ) {
-            return true;
+            return request.minPrice()
+                    == null
+                && request.maxPrice()
+                    == null;
         }
 
         Long minPrice =
             request.minPrice();
 
         if (
-            minPrice != null &&
-            price < minPrice
+            minPrice != null
+                && price < minPrice
         ) {
             return false;
         }
@@ -199,8 +204,8 @@ public class DefaultUsedMarketCrawler
             request.maxPrice();
 
         if (
-            maxPrice != null &&
-            price > maxPrice
+            maxPrice != null
+                && price > maxPrice
         ) {
             return false;
         }
@@ -208,48 +213,95 @@ public class DefaultUsedMarketCrawler
         return true;
     }
 
-    private boolean matchesLocationFilter(
-        UsedItem item,
-        UsedMarketSearchRequest request
-    ) {
+    private Comparator<UsedItem>
+        publishedAtComparator() {
 
-        String requestedLocation =
-            request.location();
-
-        if (
-            requestedLocation == null
-        ) {
-            return true;
-        }
-
-        String itemLocation =
-            item.location();
-
-        if (
-            itemLocation == null ||
-            itemLocation.isBlank()
-        ) {
-            return false;
-        }
-
-        return itemLocation
-            .toLowerCase()
-            .contains(
-                requestedLocation
-                    .toLowerCase()
-            );
+        return Comparator.comparing(
+            UsedItem::publishedAt,
+            Comparator.nullsLast(
+                Comparator.reverseOrder()
+            )
+        );
     }
 
-    private String getErrorMessage(
+    private void validateRequest(
+        UsedMarketSearchRequest request
+    ) {
+        if (
+            request == null
+        ) {
+            throw new IllegalArgumentException(
+                "request must not be null"
+            );
+        }
+
+        if (
+            request.keyword() == null
+                || request.keyword()
+                    .isBlank()
+        ) {
+            throw new IllegalArgumentException(
+                "keyword must not be blank"
+            );
+        }
+
+        if (
+            request.limit() <= 0
+        ) {
+            throw new IllegalArgumentException(
+                "limit must be greater than 0"
+            );
+        }
+
+        if (
+            request.minPrice()
+                != null
+                && request.minPrice() < 0
+        ) {
+            throw new IllegalArgumentException(
+                "minPrice must be greater than or equal to 0"
+            );
+        }
+
+        if (
+            request.maxPrice()
+                != null
+                && request.maxPrice() < 0
+        ) {
+            throw new IllegalArgumentException(
+                "maxPrice must be greater than or equal to 0"
+            );
+        }
+
+        if (
+            request.minPrice()
+                != null
+                && request.maxPrice()
+                    != null
+                && request.minPrice()
+                    > request.maxPrice()
+        ) {
+            throw new IllegalArgumentException(
+                "minPrice must be less than or equal to maxPrice"
+            );
+        }
+    }
+
+    private String buildProviderErrorMessage(
         Exception exception
     ) {
+        if (
+            exception == null
+        ) {
+            return "Unknown provider error.";
+        }
 
         String message =
             exception.getMessage();
 
         if (
-            message == null ||
-            message.isBlank()
+            message == null
+                || message.isBlank()
         ) {
             return exception
                 .getClass()
