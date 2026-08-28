@@ -8,5 +8,12 @@ server:
 used-market-crawler:
   daangn:
     enabled: true
+    base-url: https://www.daangn.com
+    connect-timeout: 5s
+    request-timeout: 10s
+
+  joongna:
+    enabled: true
+    base-url: https://web.joongna.com
     connect-timeout: 5s
     request-timeout: 10s

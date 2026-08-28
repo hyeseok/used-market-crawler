@@ -5,29 +5,19 @@ plugins {
 dependencyManagement {
     imports {
         mavenBom(
-            'org.springframework.boot:spring-boot-dependencies:4.1.1'
+            org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES
         )
     }
 }
 
 dependencies {
-    api project(
-        ':crawler-core'
-    )
+    api project(':crawler-core')
+    api project(':crawler-provider-daangn')
+    api project(':crawler-provider-joongna')
 
-    api project(
-        ':crawler-provider-daangn'
-    )
+    implementation 'org.springframework.boot:spring-boot-autoconfigure'
 
-    implementation(
-        'org.springframework.boot:spring-boot-autoconfigure'
-    )
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 
-    annotationProcessor(
-        'org.springframework.boot:spring-boot-configuration-processor'
-    )
-
-    testImplementation(
-        'org.springframework.boot:spring-boot-starter-test'
-    )
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }

@@ -10,6 +10,12 @@ import io.github.hyeseok.usedmarketcrawler.daangn.config.DaangnCrawlerConfig;
 import io.github.hyeseok.usedmarketcrawler.daangn.mapper.DaangnItemMapper;
 import io.github.hyeseok.usedmarketcrawler.daangn.parser.DaangnParser;
 
+import io.github.hyeseok.usedmarketcrawler.joongna.client.JoongnaClient;
+import io.github.hyeseok.usedmarketcrawler.joongna.config.JoongnaCrawlerConfig;
+import io.github.hyeseok.usedmarketcrawler.joongna.mapper.JoongnaItemMapper;
+import io.github.hyeseok.usedmarketcrawler.joongna.parser.JoongnaParser;
+import io.github.hyeseok.usedmarketcrawler.joongna.provider.JoongnaUsedMarketProvider;
+
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -20,10 +26,17 @@ import org.springframework.context.annotation.Bean;
 import java.util.List;
 
 @AutoConfiguration
-@EnableConfigurationProperties(
-    DaangnCrawlerProperties.class
-)
+@EnableConfigurationProperties({
+    DaangnCrawlerProperties.class,
+    JoongnaCrawlerProperties.class
+})
 public class UsedMarketCrawlerAutoConfiguration {
+
+    /*
+     * =========================================================
+     * Daangn
+     * =========================================================
+     */
 
     @Bean
     @ConditionalOnProperty(
@@ -111,6 +124,105 @@ public class UsedMarketCrawlerAutoConfiguration {
             mapper
         );
     }
+
+    /*
+     * =========================================================
+     * Joongna
+     * =========================================================
+     */
+
+    @Bean
+    @ConditionalOnProperty(
+        prefix = "used-market-crawler.joongna",
+        name = "enabled",
+        havingValue = "true",
+        matchIfMissing = true
+    )
+    @ConditionalOnMissingBean
+    public JoongnaCrawlerConfig joongnaCrawlerConfig(
+        JoongnaCrawlerProperties properties
+    ) {
+
+        return new JoongnaCrawlerConfig(
+            properties.getBaseUrl(),
+            properties.getConnectTimeout(),
+            properties.getRequestTimeout(),
+            properties.getUserAgent()
+        );
+    }
+
+    @Bean
+    @ConditionalOnProperty(
+        prefix = "used-market-crawler.joongna",
+        name = "enabled",
+        havingValue = "true",
+        matchIfMissing = true
+    )
+    @ConditionalOnMissingBean
+    public JoongnaClient joongnaClient(
+        JoongnaCrawlerConfig config
+    ) {
+
+        return new JoongnaClient(
+            config
+        );
+    }
+
+    @Bean
+    @ConditionalOnProperty(
+        prefix = "used-market-crawler.joongna",
+        name = "enabled",
+        havingValue = "true",
+        matchIfMissing = true
+    )
+    @ConditionalOnMissingBean
+    public JoongnaParser joongnaParser() {
+
+        return new JoongnaParser();
+    }
+
+    @Bean
+    @ConditionalOnProperty(
+        prefix = "used-market-crawler.joongna",
+        name = "enabled",
+        havingValue = "true",
+        matchIfMissing = true
+    )
+    @ConditionalOnMissingBean
+    public JoongnaItemMapper joongnaItemMapper() {
+
+        return new JoongnaItemMapper();
+    }
+
+    @Bean
+    @ConditionalOnProperty(
+        prefix = "used-market-crawler.joongna",
+        name = "enabled",
+        havingValue = "true",
+        matchIfMissing = true
+    )
+    @ConditionalOnMissingBean(
+        JoongnaUsedMarketProvider.class
+    )
+    public JoongnaUsedMarketProvider
+        joongnaUsedMarketProvider(
+            JoongnaClient client,
+            JoongnaParser parser,
+            JoongnaItemMapper mapper
+        ) {
+
+        return new JoongnaUsedMarketProvider(
+            client,
+            parser,
+            mapper
+        );
+    }
+
+    /*
+     * =========================================================
+     * Aggregate crawler
+     * =========================================================
+     */
 
     @Bean
     @ConditionalOnMissingBean

@@ -1,0 +1,9 @@
+dependencies {
+    api project(':crawler-core')
+
+    implementation 'org.jsoup:jsoup:1.21.2'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.20.1'
+
+    testImplementation platform('org.junit:junit-bom:5.13.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+}

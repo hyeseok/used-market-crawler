@@ -2,5 +2,6 @@ rootProject.name = 'used-market-crawler'
 
 include 'crawler-core'
 include 'crawler-provider-daangn'
+include 'crawler-provider-joongna'
 include 'crawler-spring-boot-starter'
 include 'crawler-demo'
