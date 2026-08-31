@@ -14,6 +14,7 @@ dependencies {
     api project(':crawler-core')
     api project(':crawler-provider-daangn')
     api project(':crawler-provider-joongna')
+    api project(':crawler-provider-bunjang')
 
     implementation 'org.springframework.boot:spring-boot-autoconfigure'
 

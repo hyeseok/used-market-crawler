@@ -17,3 +17,12 @@ used-market-crawler:
     base-url: https://web.joongna.com
     connect-timeout: 5s
     request-timeout: 10s
+
+  bunjang:
+    enabled: true
+    base-url: https://api.bunjang.co.kr
+    web-base-url: https://m.bunjang.co.kr
+    connect-timeout: 5s
+    request-timeout: 10s
+    user-agent: used-market-crawler/0.1
+    image-resolution: 300
